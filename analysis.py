@@ -10,6 +10,7 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import accuracy_score
 from sklearn.feature_extraction.text import CountVectorizer
+import matplotlib.pyplot as plt
 
 # Tweet file and dictionary
 FILE_READ = {
@@ -17,6 +18,8 @@ FILE_READ = {
     'emoticons': './input/AFINN-emoticons',
     'tweets': './input/Tweets.csv'
 }
+
+FIG_COUNT = 1
 
 # If there is any negative word ahead of the sentiment word
 # invert the sentiment
@@ -73,10 +76,19 @@ def read_file() -> pandas.DataFrame:
     """
     tweet_collection = pandas.read_csv(FILE_READ['tweets'])
     tweet_collection['clean_tweets'] = tweet_collection['text'].apply(lambda tweet: clean_tweets(tweet))
-    tweet_collection['custom_sentiment'] = tweet_collection['text'].apply(lambda tweet: custom_sentiment(tweet))
-    tweet_collection['sentiment'] = tweet_collection['airline_sentiment'].apply(
-        lambda sentiment: 0 if sentiment == 'negative' else 1)
+    tweet_collection['custom_sentiment_str'] = tweet_collection['text'].apply(lambda tweet: custom_sentiment(tweet))
+    tweet_collection['custom_sentiment'] = tweet_collection['custom_sentiment_str'].apply(convert_sentiment)
+    tweet_collection['sentiment'] = tweet_collection['airline_sentiment'].apply(convert_sentiment)
     return tweet_collection
+
+
+def convert_sentiment(sentiment):
+    if sentiment == 'negative':
+        return 0
+    elif sentiment == 'positive':
+        return 1
+    elif sentiment == 'neutral':
+        return 2
 
 
 def clean_tweets(raw_tweet: str) -> str:
@@ -90,7 +102,7 @@ def clean_tweets(raw_tweet: str) -> str:
     words = letters_only.lower().split()
     stops = set(stopwords.words("english"))
     meaningful_words = [w for w in words if w not in stops]
-    meaningful_neg_words = meaningful_words + neg_words
+    meaningful_neg_words = meaningful_words
     return " ".join(meaningful_neg_words)
 
 
@@ -116,7 +128,7 @@ def get_regex(tokens_in_dict: list, boundary: bool = True) -> str:
     :return: regex of dict
     """
     tokens = tokens_in_dict[:]
-    tokens.sort(key = len, reverse=True)
+    tokens.sort(key=len, reverse=True)
     tokens = [re.escape(token) for token in tokens]
 
     regex = '(?:' + '|'.join(tokens) + ')'
@@ -157,7 +169,7 @@ def handle_but(raw_tweet: str) -> list:
     return [float(sum(score1)) * 0.5, float(sum(score2)) * 1.5]
 
 
-def custom_sentiment(raw_tweet: str) -> int:
+def custom_sentiment(raw_tweet: str) -> str:
     """
     Classify the tweets based on our own classification model
     :param raw_tweet: 
@@ -166,21 +178,24 @@ def custom_sentiment(raw_tweet: str) -> int:
     score = get_sentiment_score(raw_tweet)
     score = float(sum(score))
     if score < 0:
-        return 0
+        return 'negative'
+    elif score == 0:
+        return 'neutral'
     else:
-        return 1
+        return 'positive'
 
 
-def analytics(tweet_df: pandas.DataFrame) -> dict:
+def analytics(tweet_df: pandas.DataFrame, default=True) -> dict:
     """
     Perform analytics on the data. 
     Create a model for a list of classifiers and calculate their accuracies
-    :param tweet_df: dataframe of tweets
+    :param default: 
+    :param tweet_df: data-frame of tweets
     :return accuracy_per_model: dictionary with accuracy per model
     """
     # split the data into 70 (training)-30 (testing)
     train, test = train_test_split(tweet_df, test_size=0.3, random_state=42)
-
+    sentiment_col = 'sentiment' if default else 'custom_sentiment'
     test_tweets = []
     train_tweets = []
     for tweet in train['clean_tweets']:
@@ -194,19 +209,67 @@ def analytics(tweet_df: pandas.DataFrame) -> dict:
     train_features_array = train_features.toarray()
     test_features_array = test_features.toarray()
     accuracy_per_model = {}
+    if default:
+        print("======== Analysis for classification based on data-Set ========")
+    else:
+        print("======== Analysis for classification based on custom approach =========")
     for classifier in Classifiers:
         try:
-            fit = classifier.fit(train_features, train['sentiment'])
+            fit = classifier.fit(train_features, train[sentiment_col])
             pred = fit.predict(test_features)
         except Exception:
-            fit = classifier.fit(train_features_array, train['sentiment'])
+            fit = classifier.fit(train_features_array, train[sentiment_col])
             pred = fit.predict(test_features_array)
-        accuracy = accuracy_score(pred, test['sentiment'])
+        accuracy = accuracy_score(pred, test[sentiment_col])
         accuracy_per_model[classifier.__class__.__name__] = accuracy
         print('Accuracy of ' + classifier.__class__.__name__ + ' is ' + str(accuracy))
     return accuracy_per_model
 
 
+def sentiment_plot(sentiment_count: list, default: bool = True) -> None:
+    """
+    Plot a graph of sentiment count
+    :param sentiment_count: count of each sentiment [neutral, negative, positive]
+    :param default: 
+    """
+    global FIG_COUNT
+    plt.figure(FIG_COUNT)
+    FIG_COUNT += 1
+    sentiment = [1, 2, 3]
+    plt.bar(sentiment, sentiment_count)
+    plt.xticks(sentiment, ['negative', 'neutral', 'positive'])
+    plt.ylabel('Sentiment Count')
+    plt.xlabel('sentiment')
+    if default:
+        plt.title('Default Sentiment Plot')
+        plt.savefig('sentiment')
+    else:
+        plt.title('Custom Sentiment Plot')
+        plt.savefig('custom_sentiment')
+
+
+def accuracy_plot(acuracy_per_model: dict, default=True) -> None:
+    global FIG_COUNT
+    plt.figure(FIG_COUNT)
+    FIG_COUNT += 1
+    index = [1, 2, 3, 4, 5, 6, 7]
+    plt.bar(index, acuracy_per_model.values())
+    plt.xticks(index, acuracy_per_model.keys(), rotation=90)
+    plt.ylabel('Accuracy')
+    plt.xlabel('Model')
+    if default:
+        plt.title('Model Accuracy')
+        plt.savefig('default_model')
+    else:
+        plt.title('Model Accuracy - Custom Classification')
+        plt.savefig('custom_model')
+
+
 if __name__ == '__main__':
     t = read_file()
-    analytics(t)
+    sentiment_plot(t['airline_sentiment'].value_counts())
+    sentiment_plot(t['custom_sentiment_str'].value_counts(), False)
+    accuracy_per_model = analytics(t)
+    custom_accuracy_per_model = analytics(t, False)
+    accuracy_plot(accuracy_per_model)
+    accuracy_plot(custom_accuracy_per_model, False)
