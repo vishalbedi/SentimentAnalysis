@@ -2,3 +2,7 @@ matplotlib
 sklearn
 pandas
 nltk
+numpy
+tflearn
+scikitlearn
+nltk.download("stopwords")
