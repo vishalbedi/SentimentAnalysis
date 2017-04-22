@@ -98,3 +98,8 @@ ENV/
 /site
 
 .idea
+
+# Images
+*.png
+*.jpg
+*.bmp
