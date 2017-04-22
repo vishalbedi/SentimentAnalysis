@@ -7,7 +7,6 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
-from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import accuracy_score
 from sklearn.feature_extraction.text import CountVectorizer
 import matplotlib.pyplot as plt
@@ -38,13 +37,12 @@ NEGATIVE_WORDS = \
 
 # Array of classifiers we run our data against.
 Classifiers = [
-    LogisticRegression(C=0.000000001, solver='liblinear', max_iter=200),
+    LogisticRegression(C=0.0001, solver='liblinear', max_iter=200),
     KNeighborsClassifier(3),
-    SVC(C=0.02, probability=False),
+    SVC(C=0.002, probability=False),
     DecisionTreeClassifier(),
     RandomForestClassifier(n_estimators=200),
-    AdaBoostClassifier(),
-    GaussianNB()]
+    AdaBoostClassifier()]
 
 
 def get_dict(filename: str = FILE_READ['en']) -> dict:
@@ -203,7 +201,7 @@ def analytics(tweet_df: pandas.DataFrame, default=True) -> dict:
     for tweet in test['clean_tweets']:
         test_tweets.append(tweet)
     # Get the term frequency of words in each tweet
-    cv = CountVectorizer(analyzer="word", min_df=1)
+    cv = CountVectorizer(analyzer="word", min_df=1, max_features=5000)
     train_features = cv.fit_transform(train_tweets)
     test_features = cv.transform(test_tweets)
     train_features_array = train_features.toarray()
@@ -257,6 +255,7 @@ def accuracy_plot(acuracy_per_model: dict, default=True) -> None:
     plt.xticks(index, acuracy_per_model.keys(), rotation=90)
     plt.ylabel('Accuracy')
     plt.xlabel('Model')
+    plt.tight_layout()
     if default:
         plt.title('Model Accuracy')
         plt.savefig('default_model')
