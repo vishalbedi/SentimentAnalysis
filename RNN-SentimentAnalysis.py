@@ -56,7 +56,7 @@ if test == 'Y'or test == 'N':
     # The vector input is of represented using a vector of size 5000
     net = tflearn.input_data([None, 5000])
     # The Embedding layer represents the words in VSM on semantic similarity contributing to sentiment
-    net = tflearn.embedding(net, input_dim=500, output_dim=128)
+    net = tflearn.embedding(net, input_dim=5000, output_dim=128)
     # The lstm learn the relationship between the vectors
     net = tflearn.lstm(net, 128)
     # The Pooling layer
@@ -73,7 +73,7 @@ if test == 'Y'or test == 'N':
         print("Loading the trained model")
         model.load('model/sentiment.tfl')
     score = model.evaluate(testX, testY)
-    print("Evaluation score: " + score);
+    print("Evaluation score: " + score)
 else:
     print("Exiting.. wrong choice..")
 
