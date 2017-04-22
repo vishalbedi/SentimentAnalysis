@@ -10,6 +10,7 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.feature_extraction.text import CountVectorizer
 import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
 
 # Tweet file and dictionary
 FILE_READ = {
@@ -183,11 +184,12 @@ def custom_sentiment(raw_tweet: str) -> str:
         return 'positive'
 
 
-def analytics(tweet_df: pandas.DataFrame, default=True) -> dict:
+def analytics(tweet_df: pandas.DataFrame, default=True, with_neutral=False) -> dict:
     """
     Perform analytics on the data. 
     Create a model for a list of classifiers and calculate their accuracies
-    :param default: 
+    :param with_neutral: add neutrals to data
+    :param default: use custom sentiment or dataset sentiment
     :param tweet_df: data-frame of tweets
     :return accuracy_per_model: dictionary with accuracy per model
     """
@@ -221,6 +223,12 @@ def analytics(tweet_df: pandas.DataFrame, default=True) -> dict:
         accuracy = accuracy_score(pred, test[sentiment_col])
         accuracy_per_model[classifier.__class__.__name__] = accuracy
         print('Accuracy of ' + classifier.__class__.__name__ + ' is ' + str(accuracy))
+        print('Confusion Matrix: ')
+        if with_neutral:
+            lablels_confusion = [0, 1, 2]
+        else:
+            lablels_confusion = [0, 1]
+        print(confusion_matrix(test[sentiment_col], pred, labels=lablels_confusion))
     return accuracy_per_model
 
 
@@ -247,10 +255,15 @@ def sentiment_plot(sentiment_count: list, default: bool = True) -> None:
 
 
 def accuracy_plot(acuracy_per_model: dict, default=True) -> None:
+    """
+    Accuracy plot for all models
+    :param acuracy_per_model: 
+    :param default: 
+    """
     global FIG_COUNT
     plt.figure(FIG_COUNT)
     FIG_COUNT += 1
-    index = [1, 2, 3, 4, 5, 6, 7]
+    index = [1, 2, 3, 4, 5, 6]
     plt.bar(index, acuracy_per_model.values())
     plt.xticks(index, acuracy_per_model.keys(), rotation=90)
     plt.ylabel('Accuracy')
@@ -265,9 +278,12 @@ def accuracy_plot(acuracy_per_model: dict, default=True) -> None:
 
 
 if __name__ == '__main__':
+    no_neutral = True
     t = read_file()
     sentiment_plot(t['airline_sentiment'].value_counts())
     sentiment_plot(t['custom_sentiment_str'].value_counts(), False)
+    if no_neutral:
+        t = t[t["airline_sentiment"] != "neutral"]
     accuracy_per_model = analytics(t)
     custom_accuracy_per_model = analytics(t, False)
     accuracy_plot(accuracy_per_model)
