@@ -278,13 +278,13 @@ def accuracy_plot(acuracy_per_model: dict, default=True) -> None:
 
 
 if __name__ == '__main__':
-    no_neutral = True
+    with_neutral = True
     t = read_file()
     sentiment_plot(t['airline_sentiment'].value_counts())
     sentiment_plot(t['custom_sentiment_str'].value_counts(), False)
-    if no_neutral:
+    if not with_neutral:
         t = t[t["airline_sentiment"] != "neutral"]
-    accuracy_per_model = analytics(t)
-    custom_accuracy_per_model = analytics(t, False)
+    accuracy_per_model = analytics(t, with_neutral=with_neutral)
+    custom_accuracy_per_model = analytics(t, False, with_neutral=with_neutral)
     accuracy_plot(accuracy_per_model)
     accuracy_plot(custom_accuracy_per_model, False)
